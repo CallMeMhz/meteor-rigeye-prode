@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import os
 import psutil
 import platform
 import requests
@@ -12,21 +13,32 @@ def message(text):
 	print '[', time.ctime(), '] %s' % text
 
 def load_stat():
-    loadavg = {}
-    f = open("/proc/loadavg")
-    con = f.read().split()
-    f.close()
-    loadavg['lavg_1']=con[0]
-    loadavg['lavg_5']=con[1]
-    loadavg['lavg_15']=con[2]
-    loadavg['nr']=con[3]
-    loadavg['last_pid']=con[4]
-    return loadavg
+	loadavg = {}
+	f = open("/proc/loadavg")
+	con = f.read().split()
+	f.close()
+	loadavg['lavg_1']=con[0]
+	loadavg['lavg_5']=con[1]
+	loadavg['lavg_15']=con[2]
+	loadavg['nr']=con[3]
+	loadavg['last_pid']=con[4]
+	return loadavg
 
-def get_bytes(t, iface='enp4s0'):
-    with open('/sys/class/net/' + iface + '/statistics/' + t + '_bytes', 'r') as f:
-        data = f.read();
-    return int(data)
+def get_network_interface_card_names():
+	return os.listdir('/sys/class/net/')
+
+def get_bytes(t, iface=''):
+	data = 0
+	if iface:
+		with open('/sys/class/net/' + iface + '/statistics/' + t + '_bytes', 'r') as f:
+			data = int(f.read())
+		return data
+	else:
+		for i in get_network_interface_card_names:
+			with open('/sys/class/net/' + i + '/statistics/' + t + '_bytes', 'r') as f:
+				data += int(f.read())
+		return data
+
 
 def monitor():
 	global TOKEN
@@ -75,7 +87,7 @@ def init():
 			'node': platform.node(),
 			'os': platform.system(),
 		}
- 		TOKEN = requests.post(API, payload).text
+		TOKEN = requests.post(API, payload).text
 		token_file = open('.token', 'w')
 		token_file.write(TOKEN)
 		message('Register new token')
